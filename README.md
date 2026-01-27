@@ -8,12 +8,12 @@ A Python SDK for building AI agents with LLM, tools, skills, and MCP support.
 
 **minicode** is a clean, extensible framework for building AI agents in Python. Minicode provides a simple yet powerful abstraction layer for:
 
-- 🤖 **LLM Integration** - Support for any LLM provider through a common interface
-- 🛠️ **Tool System** - Extensible tool framework with JSON Schema validation
-- 🔌 **MCP Support** - Connect to Model Context Protocol servers for additional capabilities
-- 📚 **Skills** - Load and use skills from skill directories
-- ⚡ **Async First** - Built with async/await for efficient I/O operations
-- 🎯 **Type Safe** - Full type annotations for better IDE support
+- **LLM Integration** - Support for any LLM provider through a common interface
+- **Tool System** - Extensible tool framework with JSON Schema validation
+- **MCP Support** - Connect to Model Context Protocol servers for additional capabilities
+- **Skills** - Load and use skills from skill directories
+- **Async First** - Built with async/await for efficient I/O operations
+- **Type Safe** - Full type annotations for better IDE support
 
 ## Installation
 

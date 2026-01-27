@@ -22,7 +22,7 @@ Example:
     ...     print(chunk)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from minicode.agent import Agent
 from minicode.config import add_global_mcp_server, get_global_mcp_servers, MCPConfig

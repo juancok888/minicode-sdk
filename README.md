@@ -1,5 +1,7 @@
 # minicode
 
+[中文文档](README_CN.md)
+
 A Python SDK for building AI agents with LLM, tools, skills, and MCP support.
 
 ## Overview

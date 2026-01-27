@@ -1,0 +1,9 @@
+preferred skills/tools/mcps
+mention in readme: all built-in tools in claude code are implemented
+fancy cli
+auto compact
+token usage monitor
+tool result offload to file / deleted
+/slash command
+/dump_conv & /load_conv
+github release

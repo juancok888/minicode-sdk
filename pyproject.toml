@@ -3,7 +3,7 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "minicode"
+name = "minicode-sdk"
 version = "0.1.0"
 description = "A Python SDK for building AI agents with LLM, tools, and MCP support"
 readme = "README.md"
@@ -31,10 +31,10 @@ dependencies = [
     "regex>=2023.0.0",
     "html2text>=2024.0.0",
     "beautifulsoup4>=4.12.0",
+    "openai>=1.0.0",
 ]
 
 [project.optional-dependencies]
-openai = ["openai>=1.0.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",

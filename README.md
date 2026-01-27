@@ -16,19 +16,7 @@ A Python SDK for building AI agents with LLM, tools, skills, and MCP support.
 ## Installation
 
 ```bash
-pip install minicode
-```
-
-For OpenAI support:
-
-```bash
-pip install minicode[openai]
-```
-
-For development:
-
-```bash
-pip install minicode[dev]
+pip install minicode-sdk
 ```
 
 ## Quick Start

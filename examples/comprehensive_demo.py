@@ -283,7 +283,7 @@ async def main():
     print("  ✓ Everything is async-first and type-safe")
     print(
         "\nFor more examples, see the examples/ directory or visit:\n"
-        "https://github.com/WalterSumbon/minicode"
+        "https://github.com/WalterSumbon/minicode-sdk"
     )
 
 

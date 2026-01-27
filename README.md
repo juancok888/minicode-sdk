@@ -639,7 +639,7 @@ minicode/
 
 ```bash
 # Clone the repository
-git clone https://github.com/WalterSumbon/minicode.git
+git clone https://github.com/WalterSumbon/minicode-sdk.git
 cd minicode
 
 # Install in development mode

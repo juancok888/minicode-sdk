@@ -637,7 +637,7 @@ minicode/
 
 ```bash
 # 克隆仓库
-git clone https://github.com/WalterSumbon/minicode.git
+git clone https://github.com/WalterSumbon/minicode-sdk.git
 cd minicode
 
 # 以开发模式安装

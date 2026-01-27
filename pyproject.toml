@@ -44,8 +44,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/WalterSumbon/minicode"
-Repository = "https://github.com/WalterSumbon/minicode"
+Homepage = "https://github.com/WalterSumbon/minicode-sdk"
+Repository = "https://github.com/WalterSumbon/minicode-sdk"
 
 [tool.setuptools.packages.find]
 where = ["src"]

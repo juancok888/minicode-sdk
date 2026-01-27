@@ -21,29 +21,46 @@ pip install minicode-sdk
 
 ## 快速开始
 
-### 基础 Agent
+> **提示：** 最简单的上手方式是使用 `.minicode/skills/` 目录下的内置技能。只需让你的 AI 编程助手（如 Claude Code）调用 `minicode_usage` 或 `minicode_contributing` 技能，即可帮助你使用 minicode-sdk 进行开发。
+
+### 20 行代码实现 Claude Code
+
+一个生产级的编程助手，支持文件操作、Shell 执行、网络访问、子代理等功能 - 仅需 20 行代码。
+
+查看完整示例：[examples/claude_code_in_20_lines.py](examples/claude_code_in_20_lines.py)
 
 ```python
-import asyncio
+import asyncio, os
 from minicode import Agent
-from minicode.llm import OpenAILLM
-from minicode.tools import ReadTool, WriteTool
+from minicode.llm import OpenRouterLLM
+from minicode.tools.builtin import *
 
 async def main():
-    # 创建 agent
-    agent = Agent(
-        name="assistant",
-        llm=OpenAILLM(api_key="your-api-key"),
-        tools=[ReadTool(), WriteTool()],
-        prompt="You are a helpful coding assistant."
-    )
-
-    # 流式响应
-    async for chunk in agent.stream("Read the README.md file"):
-        if chunk.get("type") == "content":
-            print(chunk.get("content", ""), end="", flush=True)
+    llm = OpenRouterLLM(api_key=os.getenv("OPENROUTER_API_KEY"), model="anthropic/claude-sonnet-4")
+    tools = [ReadTool(), WriteTool(), EditTool(), GlobTool(), GrepTool(), BashTool(),
+             WebFetchTool(), WebSearchTool(), TaskTool(), ThinkTool(), SkillTool(), AskUserQuestionTool()]
+    agent = Agent("ClaudeCode", llm, "You are a helpful coding assistant.", tools)
+    while True:
+        if msg := input("\n> User: ").strip():
+            print(f"\n> Agent:")
+            async for chunk in agent.stream(msg):
+                chunk_type = chunk.get("type")
+                if chunk_type == "content":
+                    print(chunk.get("content", ""), end="", flush=True)
+                elif chunk_type == "tool_call":
+                    func = chunk.get("tool_call", {}).get("function", {})
+                    print(f"\n[TOOL] {func.get('name')} | args: {func.get('arguments')}")
+                elif chunk_type == "tool_result":
+                    print(f"[RESULT] {chunk.get('tool_name')}: {chunk.get('result')}")
+            print()
 
 asyncio.run(main())
+```
+
+```bash
+# 设置环境变量
+export OPENROUTER_API_KEY=your_key
+python examples/claude_code_in_20_lines.py
 ```
 
 ## 核心概念
@@ -399,9 +416,9 @@ async def main():
 asyncio.run(main())
 ```
 
-#### 方法 2：配置文件（兼容 Claude Code）
+#### 方法 2：配置文件
 
-在项目目录创建 `.mcp.json` 文件，或在 `~/.claude.json` 创建用户级配置：
+在项目目录创建 `.minicode/mcp.json` 文件，或在 `~/.minicode/mcp.json` 创建用户级配置：
 
 ```json
 {
@@ -433,14 +450,14 @@ async with Agent(
     llm=OpenAILLM(api_key="your-key"),
     # use_global_mcp=True 是默认值
 ) as agent:
-    # .mcp.json 中的 MCP 服务器自动加载
+    # .minicode/mcp.json 中的 MCP 服务器自动加载
     pass
 ```
 
 **配置文件位置（按优先级）：**
 1. `MINICODE_CONFIG` 环境变量
-2. 当前目录的 `.mcp.json` 或 `mcp.json`
-3. `~/.claude.json`（用户级配置）
+2. 当前目录的 `.minicode/mcp.json`（项目级配置）
+3. `~/.minicode/mcp.json`（用户级配置）
 
 禁用自动配置加载：
 
@@ -590,6 +607,56 @@ The agent will selectively read referenced files based on the skill description.
 **必需的 YAML 元数据字段：**
 - `name`：唯一的、简短的、人类可读的标识符
 - `description`：技能的自然语言描述及其使用场景
+
+### 6. Agent 指令
+
+Agent 指令允许你定义自定义指令来指导 agent 的行为。这些指令会自动注入到用户消息中。
+
+**文件位置（按优先级）：**
+1. `MINICODE_AGENT_INSTRUCTIONS` 环境变量（文件路径，或 "0"/"false"/"no"/"off" 禁用）
+2. `.minicode/AGENT.md` 或 `.minicode/agent.md`（项目级）
+3. `~/.minicode/AGENT.md` 或 `~/.minicode/agent.md`（用户级）
+
+如果同一目录下同时存在 `AGENT.md` 和 `agent.md`，将优先使用 `AGENT.md`（并输出警告）。
+
+**示例 `.minicode/AGENT.md`：**
+
+```markdown
+# 项目规范
+
+- 代码注释使用 Google 风格
+- 所有生成的代码必须可直接投入生产环境
+- 如果需求不明确，先询问用户
+- 测试文件放在 `tests/` 目录下
+```
+
+**使用方法：**
+
+```python
+# 默认启用
+agent = Agent(
+    name="assistant",
+    llm=my_llm,
+    # use_agent_instructions=True 是默认值
+)
+
+# 禁用 agent 指令
+agent = Agent(
+    name="assistant",
+    llm=my_llm,
+    use_agent_instructions=False,
+)
+```
+
+**环境变量控制：**
+
+```bash
+# 使用自定义文件
+export MINICODE_AGENT_INSTRUCTIONS=/path/to/custom/instructions.md
+
+# 禁用 agent 指令
+export MINICODE_AGENT_INSTRUCTIONS=false
+```
 
 ## 示例
 

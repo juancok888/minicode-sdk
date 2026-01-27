@@ -1,27 +1,32 @@
 """Global configuration management for minicode.
 
 This module handles loading and managing global configuration, including
-MCP server configurations from config files. The format is compatible with
-Claude Code's MCP configuration format.
+MCP server configurations and agent instructions from config files.
 """
 
 import json
+import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-# Default config file locations (in order of precedence)
-# Compatible with Claude Code's config file naming
-CONFIG_FILE_NAMES = [
-    ".mcp.json",  # Project-level config (Claude Code style)
-    "mcp.json",
-]
+logger = logging.getLogger(__name__)
 
-# User-level config file path
-USER_CONFIG_FILE = ".claude.json"  # Claude Code style
+# Project-level config directory (relative to current directory)
+PROJECT_CONFIG_DIR = ".minicode"
 
-# Environment variable for config file path
+# User-level config directory (relative to home directory)
+USER_CONFIG_DIR = ".minicode"
+
+# MCP config file name
+MCP_CONFIG_FILE = "mcp.json"
+
+# Agent instructions file names (case variations, AGENT.md takes precedence)
+AGENT_INSTRUCTIONS_FILES = ["AGENT.md", "agent.md"]
+
+# Environment variables
 CONFIG_ENV_VAR = "MINICODE_CONFIG"
+AGENT_INSTRUCTIONS_ENV_VAR = "MINICODE_AGENT_INSTRUCTIONS"
 
 
 class MCPConfig:
@@ -29,10 +34,10 @@ class MCPConfig:
 
     This class handles loading MCP server configurations from:
     1. Environment variable MINICODE_CONFIG pointing to a config file
-    2. Config files in the current directory (.mcp.json)
-    3. Config files in the user's home directory (~/.claude.json)
+    2. Project-level config file (.minicode/mcp.json)
+    3. User-level config file (~/.minicode/mcp.json)
 
-    Config file format (JSON, compatible with Claude Code):
+    Config file format (JSON):
     {
         "mcpServers": {
             "memory": {
@@ -81,14 +86,12 @@ class MCPConfig:
                 return path
 
         # Check current directory for project-level config
-        cwd = Path.cwd()
-        for name in CONFIG_FILE_NAMES:
-            path = cwd / name
-            if path.exists():
-                return path
+        project_config = Path.cwd() / PROJECT_CONFIG_DIR / MCP_CONFIG_FILE
+        if project_config.exists():
+            return project_config
 
-        # Check home directory for user-level config (Claude Code style)
-        home_config = Path.home() / USER_CONFIG_FILE
+        # Check home directory for user-level config
+        home_config = Path.home() / USER_CONFIG_DIR / MCP_CONFIG_FILE
         if home_config.exists():
             return home_config
 
@@ -224,3 +227,167 @@ def add_global_mcp_server(
         config["headers"] = headers
 
     MCPConfig().add_server(config)
+
+
+class AgentInstructionsConfig:
+    """Agent instructions configuration manager.
+
+    This class handles loading agent instructions from:
+    1. Environment variable MINICODE_AGENT_INSTRUCTIONS pointing to a file
+    2. Project-level file (.minicode/AGENT.md or .minicode/agent.md)
+    3. User-level file (~/.minicode/AGENT.md or ~/.minicode/agent.md)
+
+    Priority: project-level > user-level
+    File name priority: AGENT.md > agent.md (warns if both exist)
+    """
+
+    _instance: Optional["AgentInstructionsConfig"] = None
+    _instructions: Optional[str]
+    _loaded: bool
+    _source_path: Optional[Path]
+
+    def __new__(cls) -> "AgentInstructionsConfig":
+        """Singleton pattern to ensure only one config instance."""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._instructions = None
+            cls._instance._loaded = False
+            cls._instance._source_path = None
+        return cls._instance
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the singleton instance (mainly for testing)."""
+        cls._instance = None
+
+    def _find_instructions_file_in_dir(
+        self, base_dir: Path
+    ) -> Tuple[Optional[Path], bool]:
+        """Find agent instructions file in a directory.
+
+        Args:
+            base_dir: Base directory to search in.
+
+        Returns:
+            Tuple of (path to file if found, whether both variants exist).
+        """
+        config_dir = base_dir / PROJECT_CONFIG_DIR
+        if not config_dir.exists():
+            return None, False
+
+        upper_path = config_dir / "AGENT.md"
+        lower_path = config_dir / "agent.md"
+
+        upper_exists = upper_path.exists()
+        lower_exists = lower_path.exists()
+
+        if upper_exists and lower_exists:
+            return upper_path, True
+        elif upper_exists:
+            return upper_path, False
+        elif lower_exists:
+            return lower_path, False
+
+        return None, False
+
+    def _find_instructions_file(self) -> Optional[Path]:
+        """Find the agent instructions file.
+
+        Returns:
+            Path to instructions file if found, None otherwise.
+        """
+        # Check environment variable first
+        env_path = os.environ.get(AGENT_INSTRUCTIONS_ENV_VAR)
+        if env_path:
+            path = Path(env_path)
+            if path.exists():
+                return path
+
+        # Check project-level first (higher priority)
+        project_file, both_exist = self._find_instructions_file_in_dir(Path.cwd())
+        if both_exist:
+            logger.warning(
+                "Both AGENT.md and agent.md found in %s, using AGENT.md",
+                Path.cwd() / PROJECT_CONFIG_DIR,
+            )
+        if project_file:
+            return project_file
+
+        # Check user-level
+        user_file, both_exist = self._find_instructions_file_in_dir(Path.home())
+        if both_exist:
+            logger.warning(
+                "Both AGENT.md and agent.md found in %s, using AGENT.md",
+                Path.home() / USER_CONFIG_DIR,
+            )
+        if user_file:
+            return user_file
+
+        return None
+
+    def load(self, force: bool = False) -> None:
+        """Load agent instructions from file.
+
+        Args:
+            force: If True, reload even if already loaded.
+        """
+        if self._loaded and not force:
+            return
+
+        self._instructions = None
+        self._source_path = self._find_instructions_file()
+
+        if self._source_path:
+            try:
+                with open(self._source_path, "r", encoding="utf-8") as f:
+                    self._instructions = f.read()
+            except IOError:
+                pass
+
+        self._loaded = True
+
+    def get_instructions(self) -> Optional[str]:
+        """Get the agent instructions content.
+
+        Returns:
+            Instructions content if found, None otherwise.
+        """
+        if not self._loaded:
+            self.load()
+        return self._instructions
+
+    def get_source_path(self) -> Optional[Path]:
+        """Get the source path of the loaded instructions.
+
+        Returns:
+            Path to the instructions file if loaded, None otherwise.
+        """
+        if not self._loaded:
+            self.load()
+        return self._source_path
+
+
+def get_agent_instructions() -> Optional[str]:
+    """Get the global agent instructions.
+
+    This is a convenience function to get agent instructions from the global config.
+
+    Returns:
+        Agent instructions content if found, None otherwise.
+    """
+    return AgentInstructionsConfig().get_instructions()
+
+
+def is_agent_instructions_enabled() -> bool:
+    """Check if agent instructions loading is enabled via environment variable.
+
+    The MINICODE_AGENT_INSTRUCTIONS environment variable can be set to:
+    - A file path: enables and uses that file
+    - "0", "false", "no", "off": disables agent instructions
+    - Not set: enables with default file search
+
+    Returns:
+        True if agent instructions should be loaded, False otherwise.
+    """
+    env_value = os.environ.get(AGENT_INSTRUCTIONS_ENV_VAR, "").lower()
+    return env_value not in ("0", "false", "no", "off")

@@ -23,29 +23,46 @@ pip install minicode-sdk
 
 ## Quick Start
 
-### Basic Agent
+> **Tip:** The easiest way to get started is to use the built-in skills in `.minicode/skills/`. Simply ask your AI coding assistant (like Claude Code) to invoke `minicode_usage` or `minicode_contributing` skills to help you develop with minicode-sdk.
+
+### Claude Code in 20 Lines
+
+A production-ready coding assistant with file ops, shell execution, web access, sub-agents, and more - all in just 20 lines of code.
+
+See the full example: [examples/claude_code_in_20_lines.py](examples/claude_code_in_20_lines.py)
 
 ```python
-import asyncio
+import asyncio, os
 from minicode import Agent
-from minicode.llm import OpenAILLM
-from minicode.tools import ReadTool, WriteTool
+from minicode.llm import OpenRouterLLM
+from minicode.tools.builtin import *
 
 async def main():
-    # Create an agent
-    agent = Agent(
-        name="assistant",
-        llm=OpenAILLM(api_key="your-api-key"),
-        tools=[ReadTool(), WriteTool()],
-        prompt="You are a helpful coding assistant."
-    )
-
-    # Stream responses
-    async for chunk in agent.stream("Read the README.md file"):
-        if chunk.get("type") == "content":
-            print(chunk.get("content", ""), end="", flush=True)
+    llm = OpenRouterLLM(api_key=os.getenv("OPENROUTER_API_KEY"), model="anthropic/claude-sonnet-4")
+    tools = [ReadTool(), WriteTool(), EditTool(), GlobTool(), GrepTool(), BashTool(),
+             WebFetchTool(), WebSearchTool(), TaskTool(), ThinkTool(), SkillTool(), AskUserQuestionTool()]
+    agent = Agent("ClaudeCode", llm, "You are a helpful coding assistant.", tools)
+    while True:
+        if msg := input("\n> User: ").strip():
+            print(f"\n> Agent:")
+            async for chunk in agent.stream(msg):
+                chunk_type = chunk.get("type")
+                if chunk_type == "content":
+                    print(chunk.get("content", ""), end="", flush=True)
+                elif chunk_type == "tool_call":
+                    func = chunk.get("tool_call", {}).get("function", {})
+                    print(f"\n[TOOL] {func.get('name')} | args: {func.get('arguments')}")
+                elif chunk_type == "tool_result":
+                    print(f"[RESULT] {chunk.get('tool_name')}: {chunk.get('result')}")
+            print()
 
 asyncio.run(main())
+```
+
+```bash
+# Setup
+export OPENROUTER_API_KEY=your_key
+python examples/claude_code_in_20_lines.py
 ```
 
 ## Core Concepts
@@ -401,9 +418,9 @@ async def main():
 asyncio.run(main())
 ```
 
-#### Method 2: Configuration File (Claude Code Compatible)
+#### Method 2: Configuration File
 
-Create a `.mcp.json` file in your project directory or `~/.claude.json` for user-level config:
+Create a `.minicode/mcp.json` file in your project directory or `~/.minicode/mcp.json` for user-level config:
 
 ```json
 {
@@ -435,14 +452,14 @@ async with Agent(
     llm=OpenAILLM(api_key="your-key"),
     # use_global_mcp=True is the default
 ) as agent:
-    # MCP servers from .mcp.json are automatically loaded
+    # MCP servers from .minicode/mcp.json are automatically loaded
     pass
 ```
 
 **Config file locations (in order of precedence):**
 1. `MINICODE_CONFIG` environment variable
-2. `.mcp.json` or `mcp.json` in current directory
-3. `~/.claude.json` (user-level config)
+2. `.minicode/mcp.json` in current directory (project-level)
+3. `~/.minicode/mcp.json` (user-level config)
 
 To disable automatic config loading:
 
@@ -592,6 +609,56 @@ The agent will selectively read referenced files based on the skill description.
 **Required YAML metadata fields:**
 - `name`: Unique, short, human-readable identifier
 - `description`: Natural language description of the skill and when to use it
+
+### 6. Agent Instructions
+
+Agent instructions allow you to define custom instructions that guide agent behavior. These instructions are automatically injected into user messages.
+
+**File locations (in order of precedence):**
+1. `MINICODE_AGENT_INSTRUCTIONS` environment variable (path to file, or "0"/"false"/"no"/"off" to disable)
+2. `.minicode/AGENT.md` or `.minicode/agent.md` (project-level)
+3. `~/.minicode/AGENT.md` or `~/.minicode/agent.md` (user-level)
+
+If both `AGENT.md` and `agent.md` exist in the same directory, `AGENT.md` takes precedence (with a warning).
+
+**Example `.minicode/AGENT.md`:**
+
+```markdown
+# Project Guidelines
+
+- Always use Google-style docstrings for code comments
+- All generated code must be production-ready
+- Ask for clarification if requirements are unclear
+- Place test files in the `tests/` directory
+```
+
+**Usage:**
+
+```python
+# Enabled by default
+agent = Agent(
+    name="assistant",
+    llm=my_llm,
+    # use_agent_instructions=True is the default
+)
+
+# Disable agent instructions
+agent = Agent(
+    name="assistant",
+    llm=my_llm,
+    use_agent_instructions=False,
+)
+```
+
+**Environment variable control:**
+
+```bash
+# Use a custom file
+export MINICODE_AGENT_INSTRUCTIONS=/path/to/custom/instructions.md
+
+# Disable agent instructions
+export MINICODE_AGENT_INSTRUCTIONS=false
+```
 
 ## Examples
 

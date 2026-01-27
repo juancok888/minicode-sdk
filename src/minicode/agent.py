@@ -56,6 +56,7 @@ class Agent:
         tools: Optional[List[BaseTool]] = None,
         mcp_servers: Optional[List[MCPServerConfig]] = None,
         use_global_mcp: bool = True,
+        use_agent_instructions: bool = True,
         mode: AgentMode = "primary",
         temperature: float = 0.7,
         top_p: float = 1.0,
@@ -74,8 +75,12 @@ class Agent:
                 Each config should contain 'name' and either 'command' (list) or 'url'.
                 Example: [{'name': 'memory', 'command': ['npx', '-y', '@modelcontextprotocol/server-memory']}]
             use_global_mcp: If True, also load MCP servers from global config file.
-                Global config is loaded from .mcp.json (project) or ~/.claude.json (user).
-                Config format is compatible with Claude Code. Set to False to disable.
+                Global config is loaded from .minicode/mcp.json (project) or
+                ~/.minicode/mcp.json (user). Set to False to disable.
+            use_agent_instructions: If True, load agent instructions from
+                .minicode/AGENT.md (project) or ~/.minicode/AGENT.md (user).
+                Can also be controlled via MINICODE_AGENT_INSTRUCTIONS env var.
+                Set to False to disable.
             mode: Agent mode - 'primary', 'subagent', or 'all'.
             temperature: Sampling temperature for LLM.
             top_p: Nucleus sampling parameter.
@@ -92,7 +97,9 @@ class Agent:
         self.auto_confirm_tools = auto_confirm_tools
 
         # Initialize prompt manager
-        self.prompt_manager = PromptManager(system_prompt)
+        self.prompt_manager = PromptManager(
+            system_prompt, use_agent_instructions=use_agent_instructions
+        )
 
         # Initialize tool registry
         self.tool_registry = ToolRegistry()
@@ -341,8 +348,9 @@ class Agent:
         Yields:
             Chunks of the agent's response
         """
-        # Add user message
-        self._session.add_message(Message(role="user", content=message))
+        # Wrap user message with agent instructions (only for the latest message)
+        wrapped_message = self.prompt_manager.wrap_user_message(message)
+        self._session.add_message(Message(role="user", content=wrapped_message))
 
         iteration = 0
         while iteration < max_iterations:

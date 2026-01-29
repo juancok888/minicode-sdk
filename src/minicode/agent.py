@@ -437,6 +437,7 @@ class Agent:
                             role="tool",
                             content=json.dumps(result),
                             tool_call_id=tool_id,
+                            tool_name=tool_name,
                         )
                         self._session.add_message(tool_result_msg)
 

@@ -1,12 +1,14 @@
 """OpenRouter LLM implementation with tool role conversion.
 
 OpenRouter doesn't support role="tool" in messages, so we convert them to role="user".
+Supports multimodal messages for image tool results.
 """
 
+import json
+import os
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 from minicode.llm.openai import OpenAILLM
-import os
 
 
 class OpenRouterLLM(OpenAILLM):
@@ -91,14 +93,93 @@ class OpenRouterLLM(OpenAILLM):
         for msg in messages:
             if msg.get("role") == "assistant" and msg.get("tool_calls"):
                 new_msg = msg.copy()
-                del new_msg["tool_calls"]
+                tool_calls = new_msg.pop("tool_calls")
                 # Keep the content if it exists, otherwise provide a placeholder
+                # describing which tools were called.
                 if not new_msg.get("content"):
-                    new_msg["content"] = ""
+                    tool_names = [
+                        tc.get("function", {}).get("name", "unknown")
+                        for tc in tool_calls
+                    ]
+                    new_msg["content"] = f"[Called tools: {', '.join(tool_names)}]"
                 converted.append(new_msg)
             else:
                 converted.append(msg.copy())
         return converted
+
+    def _parse_tool_content(self, content: str) -> Optional[Dict[str, Any]]:
+        """Parse tool result content as JSON.
+
+        Args:
+            content: Tool result content string.
+
+        Returns:
+            Parsed JSON dict, or None if parsing fails.
+        """
+        try:
+            return json.loads(content)
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+    def _build_image_content_block(
+        self, result: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Build an image content block for multimodal messages.
+
+        Args:
+            result: Tool result containing image data.
+
+        Returns:
+            Image URL content block in OpenAI format.
+        """
+        mime_type = result.get("mime_type", "image/png")
+        base64_data = result.get("data", "")
+        return {
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:{mime_type};base64,{base64_data}",
+            },
+        }
+
+    def _build_pdf_content_blocks(
+        self, result: Dict[str, Any], tool_name: str
+    ) -> List[Dict[str, Any]]:
+        """Build content blocks for a PDF tool result.
+
+        Each PDF page is converted to an image content block.
+
+        Args:
+            result: Tool result containing PDF pages data.
+            tool_name: Name of the tool that produced the result.
+
+        Returns:
+            List of content blocks for multimodal message.
+        """
+        pdf_path = result.get("path", "unknown")
+        pdf_size = result.get("size", 0)
+        page_count = result.get("page_count", 0)
+        pages = result.get("pages", [])
+
+        content_blocks: List[Dict[str, Any]] = [
+            {
+                "type": "text",
+                "text": (
+                    f"[Tool Result from {tool_name}]\n"
+                    f"PDF file: {pdf_path} ({pdf_size} bytes, {page_count} pages)\n"
+                    "Pages are shown below:"
+                ),
+            }
+        ]
+
+        for page_data in pages:
+            page_num = page_data.get("page", 0)
+            content_blocks.append({
+                "type": "text",
+                "text": f"\n--- Page {page_num} ---",
+            })
+            content_blocks.append(self._build_image_content_block(page_data))
+
+        return content_blocks
 
     def _convert_tool_messages_to_user(
         self, messages: List[Dict[str, Any]]
@@ -107,6 +188,11 @@ class OpenRouterLLM(OpenAILLM):
 
         OpenRouter doesn't support role="tool", so we convert them to role="user"
         with a formatted message indicating the tool result.
+
+        For image tool results, creates multimodal messages with image content blocks
+        so the model can "see" the image.
+
+        For PDF tool results, creates multimodal messages with each page as an image.
 
         Args:
             messages: List of messages in OpenAI format.
@@ -117,18 +203,42 @@ class OpenRouterLLM(OpenAILLM):
         converted = []
         for msg in messages:
             if msg.get("role") == "tool":
-                # Convert tool message to user message with formatted content
                 tool_name = msg.get("tool_name", "unknown")
                 content = msg.get("content", "")
 
-                # Format as a user message with tool result
-                user_msg = {
-                    "role": "user",
-                    "content": f"[Tool Result from {tool_name}]\n{content}",
-                }
+                # Try to parse as JSON to check for image/pdf type.
+                result = self._parse_tool_content(content)
+
+                if result and result.get("type") == "pdf" and result.get("pages"):
+                    # Build multimodal message with PDF page images.
+                    user_msg = {
+                        "role": "user",
+                        "content": self._build_pdf_content_blocks(result, tool_name),
+                    }
+                elif result and result.get("type") == "image" and result.get("data"):
+                    # Build multimodal message with image content block.
+                    image_path = result.get("path", "unknown")
+                    image_size = result.get("size", 0)
+                    text_content = (
+                        f"[Tool Result from {tool_name}]\n"
+                        f"Image file: {image_path} ({image_size} bytes)\n"
+                        "The image is shown below:"
+                    )
+                    user_msg = {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": text_content},
+                            self._build_image_content_block(result),
+                        ],
+                    }
+                else:
+                    # Regular text tool result.
+                    user_msg = {
+                        "role": "user",
+                        "content": f"[Tool Result from {tool_name}]\n{content}",
+                    }
                 converted.append(user_msg)
             else:
-                # Keep other messages as-is
                 converted.append(msg.copy())
 
         return converted

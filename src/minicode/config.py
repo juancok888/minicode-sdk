@@ -306,9 +306,15 @@ class AgentInstructionsConfig:
         # Check project-level first (higher priority)
         project_file, both_exist = self._find_instructions_file_in_dir(Path.cwd())
         if both_exist:
+            config_dir = Path.cwd() / PROJECT_CONFIG_DIR
             logger.warning(
-                "Both AGENT.md and agent.md found in %s, using AGENT.md",
-                Path.cwd() / PROJECT_CONFIG_DIR,
+                "Multiple agent instruction files detected:\n"
+                "  - %s\n"
+                "  - %s\n"
+                "Selected: %s",
+                config_dir / "AGENT.md",
+                config_dir / "agent.md",
+                project_file,
             )
         if project_file:
             return project_file
@@ -316,9 +322,15 @@ class AgentInstructionsConfig:
         # Check user-level
         user_file, both_exist = self._find_instructions_file_in_dir(Path.home())
         if both_exist:
+            config_dir = Path.home() / USER_CONFIG_DIR
             logger.warning(
-                "Both AGENT.md and agent.md found in %s, using AGENT.md",
-                Path.home() / USER_CONFIG_DIR,
+                "Multiple agent instruction files detected:\n"
+                "  - %s\n"
+                "  - %s\n"
+                "Selected: %s",
+                config_dir / "AGENT.md",
+                config_dir / "agent.md",
+                user_file,
             )
         if user_file:
             return user_file

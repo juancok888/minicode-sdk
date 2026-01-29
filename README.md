@@ -151,7 +151,7 @@ class MyTool(BaseTool):
 - `BashTool` - Execute bash commands with timeout support and background execution
 - `BashOutputTool` - Monitor output from background bash processes
 - `KillShellTool` - Terminate background bash processes
-- `ReadTool` - Read file contents
+- `ReadTool` - Read file contents (text, images, PDF, Jupyter notebooks)
 - `WriteTool` - Write content to files
 - `EditTool` - Precise string replacement in files
 - `GlobTool` - File pattern matching (e.g., `**/*.py`)

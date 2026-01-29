@@ -149,7 +149,7 @@ class MyTool(BaseTool):
 - `BashTool` - 执行 bash 命令，支持超时和后台执行
 - `BashOutputTool` - 监控后台 bash 进程的输出
 - `KillShellTool` - 终止后台 bash 进程
-- `ReadTool` - 读取文件内容
+- `ReadTool` - 读取文件内容（文本、图片、PDF、Jupyter notebooks）
 - `WriteTool` - 写入文件内容
 - `EditTool` - 精确的文件字符串替换
 - `GlobTool` - 文件模式匹配（如 `**/*.py`）

